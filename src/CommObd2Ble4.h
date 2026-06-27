@@ -1,0 +1,26 @@
+#pragma once
+
+#include "ble_compat.h"
+#include "LiveData.h"
+#include "CommInterface.h"
+
+class CommObd2Ble4 : public CommInterface
+{
+
+protected:
+  uint32_t PIN = 1234;
+  uint32_t nextConnectRetryMs = 0;
+  uint8_t connectFailCount = 0;
+  uint32_t lastBleCmdSentMs = 0; // for the queue-stall watchdog (lost ELM '>' prompt)
+
+public:
+  void connectDevice() override;
+  void disconnectDevice() override;
+  void scanDevices() override;
+  void mainLoop() override;
+  void executeCommand(String cmd) override;
+  void startBleScan();
+  bool connectToServer(BLEAddress pAddress);
+  void suspendDevice() override;
+  void resumeDevice() override;
+};

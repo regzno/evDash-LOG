@@ -1,0 +1,128 @@
+[common]
+platform = espressif32
+framework = arduino
+upload_protocol = esptool
+monitor_speed = 115200
+build_flags =
+;	-D RESET_SETTINGS
+	-D BOARD_HAS_PSRAM
+	-D CORE_DEBUG_LEVEL=0
+	-mfix-esp32-psram-cache-issue
+lib_deps =
+	mikalhart/TinyGPSPlus@^1.0.2
+	erropix/ESP32 AnalogWrite@^0.2.0
+	bblanchon/ArduinoJson@^6.17.2
+	https://github.com/switchdoclabs/SDL_Arduino_INA3221
+	https://github.com/coryjfowler/MCP_CAN_lib
+	https://github.com/nickn17/Solarlib
+	knolleary/PubSubClient@^2.8
+
+[core2]
+board = m5stack-core2
+board_build.mcu = esp32
+board_build.partitions = default_16MB.csv
+board_build.f_cpu = 240000000L
+board_build.f_flash = 80000000L
+board_build.flash_mode = dio
+lib_ldf_mode = deep
+build_flags =
+	${common.build_flags}
+	-D ARDUINO_M5STACK_Core2
+	-D BOARD_M5STACK_CORE2
+;	-D M5STACK_CORE2
+;	-D LGFX_AUTODETECT
+	-D SERIAL2_RX=13
+	-D SERIAL2_TX=14
+lib_deps =
+	m5stack/M5Core2
+	${common.lib_deps}
+
+; M5CoreS3 configuration
+[env:m5stack-cores3]
+platform = ${common.platform}
+board = esp32-s3-devkitc-1
+;board_build.mcu = esp32-s3
+;board_build.partitions = default_16MB.csv
+;board_build.f_cpu = 240000000L
+;board_build.f_flash = 80000000L
+;board_build.flash_mode = dio
+framework = ${common.framework}
+build_flags =
+	${common.build_flags}
+	-DESP32S3
+	-D ARDUINO_M5STACK_CoreS3
+	-D BOARD_M5STACK_CORES3
+	-D COMMU_CS_PIN=6
+	-D COMMU_INT_PIN=13
+	-D SERIAL2_RX=44 ;change to correct GPIO pin for RX
+	-D SERIAL2_TX=43 ;change to correct GPIO pin for TX
+; CoreS3 uses NimBLE instead of the prebuilt Bluedroid host: its BTU task stack is
+; only 4 KB on ESP32-S3 and overflows during BLE service discovery (Guru Meditation
+; "Stack canary ... BTU_TASK", issue #159). NimBLE compiles from source so its host
+; task stack is configurable. Core2 (plain ESP32, 8 KB BTU stack, unaffected) stays
+; on Bluedroid - the two stacks cannot coexist in one binary.
+	-D EVDASH_USE_NIMBLE
+	-D CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192
+lib_deps =
+	m5stack/M5CoreS3
+	m5stack/M5Unified
+	m5stack/M5GFX
+	h2zero/NimBLE-Arduino@^1.4.3
+	${common.lib_deps}
+; Keep the bundled Bluedroid "BLE" library out of the link so only NimBLE provides BLE.
+lib_ignore = BLE, SimpleBLE
+
+;targets = upload
+upload_protocol = ${common.upload_protocol}
+upload_port = COM9 ;change to correct COM port for upload
+monitor_port = COM9 ;change to correct COM port for monitor
+upload_speed = 1500000
+monitor_speed = ${common.monitor_speed}
+
+; M5Core2 v1.0 board configuration
+[env:m5stack-core2-v1_0]
+platform = ${common.platform}
+board = ${core2.board}
+board_build.mcu = ${core2.board_build.mcu}
+board_build.partitions = ${core2.board_build.partitions}
+board_build.f_cpu = ${core2.board_build.f_cpu}
+board_build.f_flash = ${core2.board_build.f_flash}
+board_build.flash_mode = ${core2.board_build.flash_mode}
+lib_ldf_mode = ${core2.lib_ldf_mode}
+framework = ${common.framework}
+build_flags =
+	${core2.build_flags}
+	-D COMMU_CS_PIN=27
+	-D COMMU_INT_PIN=2
+lib_deps = ${core2.lib_deps}
+
+;targets = upload
+upload_protocol = ${common.upload_protocol}
+upload_port = COM6
+monitor_port = COM6
+upload_speed = 1500000
+monitor_speed = ${common.monitor_speed}
+
+; M5Core2 v1.1 board configuration
+[env:m5stack-core2-v1_1]
+platform = ${common.platform}
+board = ${core2.board}
+board_build.mcu = ${core2.board_build.mcu}
+board_build.partitions = ${core2.board_build.partitions}
+board_build.f_cpu = ${core2.board_build.f_cpu}
+board_build.f_flash = ${core2.board_build.f_flash}
+board_build.flash_mode = ${core2.board_build.flash_mode}
+lib_ldf_mode = ${core2.lib_ldf_mode}
+framework = ${common.framework}
+build_flags =
+	${core2.build_flags}
+	-D COMMU_CS_PIN=26
+	-D COMMU_INT_PIN=4
+lib_deps = ${core2.lib_deps}
+
+;targets = upload
+upload_protocol = ${common.upload_protocol}
+upload_port = COM6
+monitor_port = COM6
+upload_speed = 1500000
+monitor_speed = ${common.monitor_speed}

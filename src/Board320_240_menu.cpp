@@ -1,0 +1,1870 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <vector>
+#include "config.h"
+#include "CarModelUtils.h"
+#include "Board320_240.h"
+#include "EvDashMobileRelay.h"
+
+extern EvDashMobileRelay *mobileRelay;
+
+String Board320_240::menuItemText(int16_t menuItemId, String title)
+{
+  String prefix = "", suffix = "";
+  uint8_t perc = 0;
+
+  switch (menuItemId)
+  {
+  // Set vehicle type
+  case MENU_VEHICLE_TYPE:
+    suffix = getCarModelAbrpStr(liveData->settings.carType);
+    suffix = String("[" + suffix.substring(0, suffix.indexOf(":", 12)) + "]");
+    break;
+  case MENU_SAVE_SETTINGS:
+    sprintf(tmpStr1, "[v%d]", liveData->settings.settingsVersion);
+    suffix = tmpStr1;
+    break;
+  case MENU_APP_VERSION:
+    sprintf(tmpStr1, "[%s]", APP_VERSION);
+    suffix = tmpStr1;
+    break;
+  case MENU_WIFI:
+    if (liveData->settings.wifiEnabled != 1 || WiFi.status() != WL_CONNECTED)
+    {
+      suffix = "[not_connected]";
+    }
+    else if (wifiTransferredBytes >= (1024UL * 1024UL))
+    {
+      sprintf(tmpStr1, "[%luMB]", (unsigned long)(wifiTransferredBytes / (1024UL * 1024UL)));
+      suffix = tmpStr1;
+    }
+    else if (wifiTransferredBytes >= 1024UL)
+    {
+      sprintf(tmpStr1, "[%lukB]", (unsigned long)(wifiTransferredBytes / 1024UL));
+      suffix = tmpStr1;
+    }
+    else
+    {
+      sprintf(tmpStr1, "[%luB]", (unsigned long)wifiTransferredBytes);
+      suffix = tmpStr1;
+    }
+    break;
+  case MENU_ADAPTER_TYPE:
+    switch (liveData->settings.commType)
+    {
+    case COMM_TYPE_CAN_COMMU:
+      suffix = "[CAN]";
+      break;
+    case COMM_TYPE_OBD2_BLE4:
+      suffix = "[BLE4]";
+      break;
+    default:
+      suffix = "[?]";
+      break;
+    }
+    break;
+  // TODO: Why is do these cases not match the vehicle type id?
+  case VEHICLE_TYPE_IONIQ_2018_28:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_IONIQ_2018) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_IONIQ_2018_PHEV:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_IONIQ_PHEV) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_KONA_2020_64:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_KONA_2020_64) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_KONA_2020_39:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_KONA_2020_39) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_HYUNDAI_IONIQ5_58_63:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_IONIQ5_58_63) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_HYUNDAI_IONIQ5_72:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_IONIQ5_72) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_HYUNDAI_IONIQ5_77_84:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_IONIQ5_77_84) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_HYUNDAI_IONIQ6_53:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_IONIQ6_53) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_HYUNDAI_IONIQ6_58_63:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_IONIQ6_58_63) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_HYUNDAI_IONIQ6_77_84:
+    prefix = (liveData->settings.carType == CAR_HYUNDAI_IONIQ6_77_84) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_ENIRO_2020_64:
+    prefix = (liveData->settings.carType == CAR_KIA_ENIRO_2020_64) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_ENIRO_2020_39:
+    prefix = (liveData->settings.carType == CAR_KIA_ENIRO_2020_39) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_ESOUL_2020_64:
+    prefix = (liveData->settings.carType == CAR_KIA_ESOUL_2020_64) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_KIA_EV6_58_63:
+    prefix = (liveData->settings.carType == CAR_KIA_EV6_58_63) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_KIA_EV6_77_84:
+    prefix = (liveData->settings.carType == CAR_KIA_EV6_77_84) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_KIA_EV9_100:
+    prefix = (liveData->settings.carType == CAR_KIA_EV9_100) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_AUDI_Q4_35:
+    prefix = (liveData->settings.carType == CAR_AUDI_Q4_35) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_AUDI_Q4_40:
+    prefix = (liveData->settings.carType == CAR_AUDI_Q4_40) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_AUDI_Q4_45:
+    prefix = (liveData->settings.carType == CAR_AUDI_Q4_45) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_AUDI_Q4_50:
+    prefix = (liveData->settings.carType == CAR_AUDI_Q4_50) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_SKODA_ENYAQ_55:
+    prefix = (liveData->settings.carType == CAR_SKODA_ENYAQ_55) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_SKODA_ENYAQ_62:
+    prefix = (liveData->settings.carType == CAR_SKODA_ENYAQ_62) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_SKODA_ENYAQ_82:
+    prefix = (liveData->settings.carType == CAR_SKODA_ENYAQ_82) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_SKODA_CITIGO_E_IV:
+    prefix = (liveData->settings.carType == CAR_SKODA_CITIGO_E_IV) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_VW_ID3_2021_45:
+    prefix = (liveData->settings.carType == CAR_VW_ID3_2021_45) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_VW_ID3_2021_58:
+    prefix = (liveData->settings.carType == CAR_VW_ID3_2021_58) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_VW_ID3_2021_77:
+    prefix = (liveData->settings.carType == CAR_VW_ID3_2021_77) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_VW_ID4_2021_45:
+    prefix = (liveData->settings.carType == CAR_VW_ID4_2021_45) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_VW_ID4_2021_58:
+    prefix = (liveData->settings.carType == CAR_VW_ID4_2021_58) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_VW_ID4_2021_77:
+    prefix = (liveData->settings.carType == CAR_VW_ID4_2021_77) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_VW_EUP_36:
+    prefix = (liveData->settings.carType == CAR_VW_EUP_36) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_ZOE_22_DEV:
+    prefix = (liveData->settings.carType == CAR_RENAULT_ZOE_ZE20_22) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_ZOE_ZE40_41:
+    prefix = (liveData->settings.carType == CAR_RENAULT_ZOE_ZE40_41) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_ZOE_ZE50_52:
+    prefix = (liveData->settings.carType == CAR_RENAULT_ZOE_ZE50_52) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_SEAT_MII_ELECTRIC_36:
+    prefix = (liveData->settings.carType == CAR_SEAT_MII_ELECTRIC_36) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_BMWI3_2014_22:
+    prefix = (liveData->settings.carType == CAR_BMW_I3_2014) ? ">" : "";
+    break;
+  case VEHICLE_TYPE_PEUGEOT_E208:
+    prefix = (liveData->settings.carType == CAR_PEUGEOT_E208) ? ">" : "";
+    break;
+  //
+  case MENU_ADAPTER_CAN_COMMU:
+    prefix = (liveData->settings.commType == COMM_TYPE_CAN_COMMU) ? ">" : "";
+    break;
+  case MENU_ADAPTER_OBD2_BLE4:
+    prefix = (liveData->settings.commType == COMM_TYPE_OBD2_BLE4) ? ">" : "";
+    break;
+  case MENU_ADAPTER_OBD2_NAME:
+    sprintf(tmpStr1, "%s", liveData->settings.obd2Name);
+    suffix = tmpStr1;
+    break;
+  case MENU_ADAPTER_COMMAND_QUEUE_AUTOSTOP:
+    suffix = (liveData->settings.commandQueueAutoStop == 0) ? "[off]" : "[on]";
+    break;
+  case MENU_ADAPTER_DISABLE_COMMAND_OPTIMIZER:
+    suffix = (liveData->settings.disableCommandOptimizer == 0) ? "[on]" : "[off]";
+    break;
+  case MENU_ADAPTER_MOBILE_RELAY:
+    suffix = (liveData->settings.relayForMobileEnabled == 1) ? "[on]" : "[off]";
+    break;
+  case MENU_ADAPTER_MOBILE_RELAY_PAIR:
+    if (mobileRelay != nullptr && mobileRelay->pairingCode()[0] != '\0')
+    {
+      sprintf(tmpStr1, "[%s]", mobileRelay->pairingCode());
+      suffix = tmpStr1;
+    }
+    else
+    {
+      suffix = "[start]";
+    }
+    break;
+  case MENU_ADAPTER_MOBILE_RELAY_FORGET:
+    suffix = (strlen(liveData->settings.relayToken) >= 12) ? "[paired]" : "[empty]";
+    break;
+  case MENU_BOARD_POWER_MODE:
+    suffix = (liveData->settings.boardPowerMode == 1) ? "[ext.]" : "[USB]";
+    break;
+  case MENU_REMOTE_UPLOAD:
+    break;
+  case MENU_REMOTE_UPLOAD_UART:
+    sprintf(tmpStr1, "[HW UART=%d]", liveData->settings.gprsHwSerialPort);
+    suffix = (liveData->settings.gprsHwSerialPort == 255) ? "[off]" : tmpStr1;
+    break;
+  case MENU_REMOTE_UPLOAD_API_INTERVAL:
+    sprintf(tmpStr1, "[%d sec]", liveData->settings.remoteUploadIntervalSec);
+    suffix = (liveData->settings.remoteUploadIntervalSec == 0) ? "[off]" : tmpStr1;
+    break;
+  case MENU_REMOTE_UPLOAD_ABRP_INTERVAL:
+    if (liveData->settings.remoteUploadAbrpIntervalSec == 0)
+    {
+      suffix = "[off]";
+    }
+    else
+    {
+      const uint16_t halfSecondSteps = liveData->settings.remoteUploadAbrpIntervalSec;
+      if ((halfSecondSteps % 2) == 0)
+      {
+        sprintf(tmpStr1, "[%d sec]", halfSecondSteps / 2);
+      }
+      else
+      {
+        sprintf(tmpStr1, "[%d.5 sec]", halfSecondSteps / 2);
+      }
+      suffix = tmpStr1;
+    }
+    break;
+  case MENU_REMOTE_UPLOAD_ABRP_LOG_SDCARD:
+    suffix = (liveData->settings.abrpSdcardLog == 0) ? "[off]" : "[on]";
+    break;
+  case MENU_REMOTE_UPLOAD_TRACCAR_ENABLED:
+    suffix = (liveData->settings.traccarEnabled == 0) ? "[no]" : "[yes]";
+    break;
+  case MENU_REMOTE_UPLOAD_TRACCAR_SERVER:
+    suffix = String(liveData->settings.traccarServerHost);
+    break;
+  case MENU_REMOTE_UPLOAD_TRACCAR_PORT:
+    sprintf(tmpStr1, "%u", liveData->settings.traccarServerPort);
+    suffix = tmpStr1;
+    break;
+  case MENU_REMOTE_UPLOAD_MQTT_ENABLED:
+    suffix = (liveData->settings.mqttEnabled == 0) ? "[off]" : "[on]";
+    break;
+  case MENU_REMOTE_UPLOAD_MQTT_SERVER:
+    sprintf(tmpStr1, "%s", liveData->settings.mqttServer);
+    suffix = tmpStr1;
+    break;
+  case MENU_REMOTE_UPLOAD_MQTT_ID:
+    sprintf(tmpStr1, "%s", liveData->settings.mqttId);
+    suffix = tmpStr1;
+    break;
+  case MENU_REMOTE_UPLOAD_MQTT_USERNAME:
+    sprintf(tmpStr1, "%s", liveData->settings.mqttUsername);
+    suffix = tmpStr1;
+    break;
+  case MENU_REMOTE_UPLOAD_MQTT_PASSWORD:
+    sprintf(tmpStr1, "%s", liveData->settings.mqttPassword);
+    suffix = tmpStr1;
+    break;
+  case MENU_REMOTE_UPLOAD_MQTT_TOPIC:
+    sprintf(tmpStr1, "%s", liveData->settings.mqttPubTopic);
+    suffix = tmpStr1;
+    break;
+  case MENU_REMOTE_UPLOAD_CONTRIBUTE_DATA_TO_EVDASH_DEV_TEAM:
+    suffix = (liveData->settings.contributeData == 0) ? "[off]" : "[on]";
+    break;
+  case MENU_SDCARD:
+    perc = 0;
+    if (SD.totalBytes() != 0)
+      perc = (uint8_t)(((float)SD.usedBytes() / (float)SD.totalBytes()) * 100.0);
+    sprintf(tmpStr1, "[%d] %lluMB %d%%", SD.cardType(), SD.cardSize() / (1024 * 1024), perc);
+    suffix = tmpStr1;
+    break;
+  case MENU_SERIAL_CONSOLE:
+    suffix = (liveData->settings.serialConsolePort == 255) ? "[off]" : "[on]";
+    break;
+  case MENU_VOLTMETER:
+    suffix = (liveData->settings.voltmeterEnabled == 0) ? "[off]" : "[on]";
+    break;
+  case MENU_DEBUG_LEVEL:
+    switch (liveData->settings.debugLevel)
+    {
+    case DEBUG_NONE:
+      suffix = "[all]";
+      break;
+    case DEBUG_COMM:
+      suffix = "[comm]";
+      break;
+    case DEBUG_GSM:
+      suffix = "[net]";
+      break;
+    case DEBUG_SDCARD:
+      suffix = "[sdcard]";
+      break;
+    case DEBUG_GPS:
+      suffix = "[gps]";
+      break;
+    default:
+      suffix = "[unknown]";
+    }
+    break;
+  case MENU_SCREEN_ROTATION:
+    suffix = (liveData->settings.displayRotation == 1) ? "[vertical]" : "[normal]";
+    break;
+  case MENU_DEFAULT_SCREEN:
+    sprintf(tmpStr1, "[%d]", liveData->settings.defaultScreen);
+    suffix = tmpStr1;
+    break;
+  case MENU_SCREEN_BRIGHTNESS:
+    sprintf(tmpStr1, "[%d%%]", liveData->settings.lcdBrightness);
+    sprintf(tmpStr2, "[auto/%d%%]", ((liveData->params.lcdBrightnessCalc == -1) ? 100 : liveData->params.lcdBrightnessCalc));
+    suffix = ((liveData->settings.lcdBrightness == 0) ? tmpStr2 : tmpStr1);
+    break;
+  case MENU_SLEEP_MODE:
+    switch (liveData->settings.sleepModeLevel)
+    {
+    case SLEEP_MODE_OFF:
+      suffix = "[off]";
+      break;
+    case SLEEP_MODE_SCREEN_ONLY:
+      suffix = "[screen only]";
+      break;
+    default:
+      suffix = "[unknown]";
+    }
+    break;
+  case MENU_SLEEP_MODE_MODE:
+    switch (liveData->settings.sleepModeLevel)
+    {
+    case SLEEP_MODE_OFF:
+      suffix = "[off]";
+      break;
+    case SLEEP_MODE_SCREEN_ONLY:
+      suffix = "[screen only]";
+      break;
+    default:
+      suffix = "[unknown]";
+    }
+    break;
+  case MENU_GPS_MODULE_TYPE:
+    switch (liveData->settings.gpsModuleType)
+    {
+    case GPS_MODULE_TYPE_NEO_M8N:
+      suffix = "[M5 NEO-M8N]";
+      break;
+    case GPS_MODULE_TYPE_M5_GNSS:
+      suffix = "[M5 GNSS]";
+      break;
+    case GPS_MODULE_TYPE_GPS_V21_GNSS:
+      suffix = "[GPS v2.1 GNSS]";
+      break;
+    default:
+      suffix = "[none]";
+    }
+    break;
+  case MENU_GPS:
+  case MENU_GPS_PORT:
+    sprintf(tmpStr1, "[UART=%d]", liveData->settings.gpsHwSerialPort);
+    suffix = (liveData->settings.gpsHwSerialPort == 255) ? "[off]" : tmpStr1;
+    break;
+  case MENU_GPS_SPEED:
+    sprintf(tmpStr1, "[%d bps]", liveData->settings.gpsSerialPortSpeed);
+    suffix = tmpStr1;
+    break;
+  case MENU_CAR_SPEED_TYPE:
+    switch (liveData->settings.carSpeedType)
+    {
+    case CAR_SPEED_TYPE_CAR:
+      suffix = "[CAR]";
+      break;
+    case CAR_SPEED_TYPE_GPS:
+      suffix = "[GPS]";
+      break;
+    default:
+      suffix = "[automatic]";
+    }
+    break;
+  case MENU_CURRENT_TIME:
+    struct tm now;
+    if (getLocalTime(&now, 0))
+    {
+      sprintf(tmpStr1, "%02d-%02d-%02d %02d:%02d:%02d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+      suffix = tmpStr1;
+    }
+    else
+    {
+      suffix = "[-- -- -- --:--:--]";
+    }
+    break;
+  case MENU_TIMEZONE:
+    sprintf(tmpStr1, "[%d hrs]", liveData->settings.timezone);
+    suffix = tmpStr1;
+    break;
+  case MENU_DAYLIGHT_SAVING:
+    suffix = (liveData->settings.daylightSaving == 1) ? "[on]" : "[off]";
+    break;
+  case MENU_SPEED_CORRECTION:
+    sprintf(tmpStr1, "[%d]", liveData->settings.speedCorrection);
+    suffix = tmpStr1;
+    break;
+  case MENU_RHD:
+    suffix = (liveData->settings.rightHandDrive == 1) ? "[on]" : "[off]";
+    break;
+  //
+  case MENU_SDCARD_ENABLED:
+    sprintf(tmpStr1, "[%s]", (liveData->settings.sdcardEnabled == 1) ? "on" : "off");
+    suffix = tmpStr1;
+    break;
+  case MENU_SDCARD_JSON_TYPE:
+    suffix = "[v2]";
+    break;
+  case MENU_SDCARD_AUTOSTARTLOG:
+    sprintf(tmpStr1, "[%s]", (liveData->settings.sdcardEnabled == 0) ? "n/a" : (liveData->settings.sdcardAutstartLog == 1) ? "on"
+                                                                                                                           : "off");
+    suffix = tmpStr1;
+    break;
+  case MENU_SDCARD_MOUNT_STATUS:
+    sprintf(tmpStr1, "[%s]", (liveData->settings.sdcardEnabled == 0) ? "n/a" : (strlen(liveData->params.sdcardFilename) != 0) ? liveData->params.sdcardFilename
+                                                                           : (liveData->params.sdcardInit)                    ? "READY"
+                                                                                                                              : "MOUNT");
+    suffix = tmpStr1;
+    break;
+  case MENU_SDCARD_REC:
+    sprintf(tmpStr1, "[%s]", (liveData->settings.sdcardEnabled == 0) ? "n/a" : (liveData->params.sdcardRecording) ? "STOP"
+                                                                                                                  : "START");
+    suffix = tmpStr1;
+    break;
+  case MENU_SDCARD_INTERVAL:
+    sprintf(tmpStr1, "[%d]", liveData->settings.sdcardLogIntervalSec);
+    suffix = tmpStr1;
+    break;
+  //
+  case MENU_VOLTMETER_ENABLED:
+    sprintf(tmpStr1, "[%s]", (liveData->settings.voltmeterEnabled == 1) ? "on" : "off");
+    suffix = tmpStr1;
+    break;
+  case MENU_VOLTMETER_SLEEP:
+    sprintf(tmpStr1, "[%s]", (liveData->settings.voltmeterBasedSleep == 1) ? "on" : "off");
+    suffix = tmpStr1;
+    break;
+  case MENU_VOLTMETER_SLEEPVOL:
+    sprintf(tmpStr1, "[%.1f V]", liveData->settings.voltmeterSleep);
+    suffix = tmpStr1;
+    break;
+  case MENU_VOLTMETER_WAKEUPVOL:
+    sprintf(tmpStr1, "[%.1f V]", liveData->settings.voltmeterWakeUp);
+    suffix = tmpStr1;
+    break;
+  case MENU_VOLTMETER_CUTOFFVOL:
+    sprintf(tmpStr1, "[%.1f V]", liveData->settings.voltmeterCutOff);
+    suffix = tmpStr1;
+    break;
+
+  //
+  case MENU_WIFI_ENABLED:
+    suffix = (liveData->settings.wifiEnabled == 1) ? "[on]" : "[off]";
+    break;
+  case MENU_WIFI_PAIR_EVDASH:
+    if (pairPendingCode[0] != '\0')
+    {
+      const time_t nowTs = (liveData->params.currentTime > 0) ? liveData->params.currentTime : static_cast<time_t>(millis() / 1000U);
+      int32_t leftSec = static_cast<int32_t>(pairPendingExpiresAt - nowTs);
+      if (leftSec < 0)
+      {
+        leftSec = 0;
+      }
+      sprintf(tmpStr1, "[%s %lds]", pairPendingCode, static_cast<long>(leftSec));
+      suffix = tmpStr1;
+    }
+    else
+    {
+      suffix = "[start]";
+    }
+    break;
+  case MENU_WIFI_SSID:
+    sprintf(tmpStr1, "%s", liveData->settings.wifiSsid);
+    suffix = tmpStr1;
+    break;
+  case MENU_WIFI_PASSWORD:
+    sprintf(tmpStr1, "%s", liveData->settings.wifiPassword);
+    suffix = tmpStr1;
+    break;
+  case MENU_WIFI_ENABLED2:
+    suffix = (liveData->settings.backupWifiEnabled == 1) ? "[on]" : "[off]";
+    break;
+  case MENU_WIFI_SSID2:
+    sprintf(tmpStr1, "%s", liveData->settings.wifiSsid2);
+    suffix = tmpStr1;
+    break;
+  case MENU_WIFI_PASSWORD2:
+    sprintf(tmpStr1, "%s", liveData->settings.wifiPassword2);
+    suffix = tmpStr1;
+    break;
+  case MENU_WIFI_NTP:
+    suffix = (liveData->settings.ntpEnabled == 1) ? "[on]" : "[off]";
+    break;
+  case MENU_WIFI_ACTIVE:
+    if (liveData->params.isWifiBackupLive == true)
+    {
+      suffix = "backup";
+    }
+    else
+    {
+      suffix = "main";
+    }
+    break;
+  case MENU_WIFI_IPADDR:
+    suffix = WiFi.localIP().toString();
+    break;
+  //
+  case MENU_DISTANCE_UNIT:
+    suffix = (liveData->settings.distanceUnit == 'k') ? "[km]" : "[mi]";
+    break;
+  case MENU_TEMPERATURE_UNIT:
+    suffix = (liveData->settings.temperatureUnit == 'c') ? "[C]" : "[F]";
+    break;
+  case MENU_PRESSURE_UNIT:
+    suffix = (liveData->settings.pressureUnit == 'b') ? "[bar]" : "[psi]";
+    break;
+  }
+
+  if (title.startsWith("<- "))
+  {
+    title = title.substring(3);
+  }
+
+  title = ((prefix == "") ? "" : prefix + " ") + title + ((suffix == "") ? "" : " " + suffix);
+
+  return title;
+}
+
+uint16_t Board320_240::menuItemsCountCurrent()
+{
+  uint16_t count = 0;
+  for (uint16_t i = 0; i < liveData->menuItemsCount; ++i)
+  {
+    if (liveData->menuCurrent == liveData->menuItems[i].parentId && strlen(liveData->menuItems[i].title) != 0)
+    {
+      count++;
+    }
+  }
+  return count;
+}
+
+void Board320_240::menuScrollByPixels(int16_t deltaTopPx)
+{
+  const uint16_t totalItems = menuItemsCountCurrent();
+  if (totalItems == 0)
+  {
+    liveData->menuItemOffset = 0;
+    menuItemOffsetPx = 0;
+    return;
+  }
+
+  const int32_t totalHeight = int32_t(totalItems) * int32_t(menuItemHeight);
+  const int32_t viewHeight = tft.height();
+  if (totalHeight <= viewHeight)
+  {
+    liveData->menuItemOffset = 0;
+    menuItemOffsetPx = 0;
+    return;
+  }
+
+  int32_t scrollPx = int32_t(liveData->menuItemOffset) * int32_t(menuItemHeight) + int32_t(menuItemOffsetPx);
+  scrollPx -= deltaTopPx;
+  const int32_t maxScroll = totalHeight - viewHeight;
+  if (scrollPx < 0)
+    scrollPx = 0;
+  if (scrollPx > maxScroll)
+    scrollPx = maxScroll;
+
+  liveData->menuItemOffset = scrollPx / menuItemHeight;
+  menuItemOffsetPx = scrollPx % menuItemHeight;
+}
+
+uint16_t Board320_240::menuItemFromTouchY(int16_t touchY)
+{
+  return liveData->menuItemOffset + uint16_t((touchY + menuItemOffsetPx) / menuItemHeight);
+}
+
+/**
+ * Renders the menu UI on the screen.
+ * Handles pagination/scrolling of menu items.
+ * Highlights selected menu item.
+ * Renders menu items from static menuItems array.
+ */
+void Board320_240::showMenu()
+{
+  messageDialogVisible = false;
+  ensureMenuBackbuffer();
+  int16_t posY = 0;
+  uint16_t tmpCurrMenuItem = 0;
+  const int16_t renderOffsetY = menuBackbufferActive ? menuBackbufferOverscanPx : 0;
+  const int16_t renderHeight = spr.height();
+  const bool allowHoverHighlight = !menuDragScrollActive;
+  const int16_t textPaddingX = 3;
+  const int16_t backIconW = 14;
+  const int16_t backTextGap = 10;
+  const int16_t highlightRadius = 8;
+  const int16_t textOffsetY = 2; // 2px down from previous layout
+  int8_t off = 2;
+
+  liveData->menuVisible = true;
+  spr.fillSprite(TFT_BLACK);
+  spr.setTextDatum(TL_DATUM);
+  sprSetFont(fontRobotoThin24);
+  const int16_t textHeight = spr.fontHeight();
+
+  // Page scroll
+  menuItemHeight = spr.fontHeight();
+#if defined(BOARD_M5STACK_CORE2) || defined(BOARD_M5STACK_CORES3)
+  off = menuItemHeight / 4;
+  menuItemHeight = menuItemHeight * 1.5;
+#endif // BOARD_M5STACK_CORE2 || BOARD_M5STACK_CORES3
+  menuVisibleCount = (int)(tft.height() / menuItemHeight);
+  const uint8_t menuVisibleCountFull = (menuVisibleCount == 0) ? 1 : menuVisibleCount;
+
+  const uint16_t totalItemsCurrent = menuItemsCountCurrent();
+  const int32_t totalHeightCurrent = int32_t(totalItemsCurrent) * int32_t(menuItemHeight);
+  const int32_t viewHeightCurrent = tft.height();
+  if (totalItemsCurrent == 0 || totalHeightCurrent <= viewHeightCurrent)
+  {
+    liveData->menuItemOffset = 0;
+    menuItemOffsetPx = 0;
+    if (totalItemsCurrent == 0)
+      liveData->menuItemSelected = 0;
+  }
+  else
+  {
+    int32_t scrollPx = int32_t(liveData->menuItemOffset) * int32_t(menuItemHeight) + int32_t(menuItemOffsetPx);
+    const int32_t maxScroll = totalHeightCurrent - viewHeightCurrent;
+    if (scrollPx < 0)
+      scrollPx = 0;
+    if (scrollPx > maxScroll)
+      scrollPx = maxScroll;
+    liveData->menuItemOffset = scrollPx / menuItemHeight;
+    menuItemOffsetPx = scrollPx % menuItemHeight;
+  }
+
+  if (totalItemsCurrent > 0 && liveData->menuItemSelected >= totalItemsCurrent)
+  {
+    liveData->menuItemSelected = totalItemsCurrent - 1;
+  }
+
+  // Keep selected item visible only for item-based navigation.
+  // During drag scrolling we keep raw pixel offset and do not snap to cursor.
+  if (!menuDragScrollActive)
+  {
+    if (liveData->menuItemSelected >= liveData->menuItemOffset + menuVisibleCountFull)
+    {
+      liveData->menuItemOffset = liveData->menuItemSelected - menuVisibleCountFull + 1;
+      menuItemOffsetPx = 0;
+      posY = 0;
+    }
+    if (liveData->menuItemSelected < liveData->menuItemOffset)
+    {
+      liveData->menuItemOffset = liveData->menuItemSelected;
+      menuItemOffsetPx = 0;
+      posY = 0;
+    }
+  }
+  posY = renderOffsetY - int16_t(menuItemOffsetPx);
+
+  // Print items
+  for (uint16_t i = 0; i < liveData->menuItemsCount; ++i)
+  {
+    if (liveData->menuCurrent == liveData->menuItems[i].parentId && strlen(liveData->menuItems[i].title) != 0)
+    {
+      if (tmpCurrMenuItem >= liveData->menuItemOffset)
+      {
+        bool isMenuItemSelected = liveData->menuItemSelected == tmpCurrMenuItem;
+        bool isMenuItemHovered = allowHoverHighlight && (menuTouchHoverIndex == int16_t(tmpCurrMenuItem));
+        if (isMenuItemSelected || isMenuItemHovered)
+        {
+          uint16_t fillCol = isMenuItemSelected ? 0x2104 : 0x1082;
+          uint16_t borderCol = isMenuItemSelected ? TFT_CYAN : TFT_DARKGREY;
+          spr.fillRoundRect(2, posY + 1, 316, menuItemHeight - 2, highlightRadius, fillCol);
+          spr.drawRoundRect(2, posY + 1, 316, menuItemHeight - 2, highlightRadius, borderCol);
+        }
+        spr.setTextColor(isMenuItemHovered ? TFT_CYAN : TFT_WHITE);
+        String itemTitle = menuItemText(liveData->menuItems[i].id, liveData->menuItems[i].title);
+        bool isActiveChoice = itemTitle.startsWith("> ");
+        if (isActiveChoice)
+        {
+          itemTitle = itemTitle.substring(2);
+        }
+        bool isBackNavItem = (strncmp(liveData->menuItems[i].title, "<-", 2) == 0);
+        int16_t drawX = textPaddingX;
+        if (isBackNavItem && posY > -menuItemHeight && posY < renderHeight)
+        {
+          uint16_t iconCol = isMenuItemHovered ? TFT_CYAN : TFT_WHITE;
+          int16_t cx = textPaddingX + backIconW;
+          int16_t cy = posY + menuItemHeight / 2 + 1;
+          // Bent enter-style arrow (back/parent indicator)
+          spr.drawLine(cx, cy - 6, cx, cy, iconCol);
+          spr.drawLine(cx, cy, textPaddingX + 2, cy, iconCol);
+          spr.drawLine(textPaddingX + 2, cy, textPaddingX + 6, cy - 4, iconCol);
+          spr.drawLine(textPaddingX + 2, cy, textPaddingX + 6, cy + 4, iconCol);
+          drawX += backIconW + backTextGap;
+        }
+        if (isActiveChoice && posY > -menuItemHeight && posY < renderHeight)
+        {
+          const int16_t markerCx = drawX + 6;
+          const int16_t markerCy = posY + menuItemHeight / 2 + 1;
+          const uint16_t markerBorder = isMenuItemHovered ? TFT_CYAN : TFT_GREEN;
+          const uint16_t markerFill = 0x0240;
+          spr.fillCircle(markerCx, markerCy, 6, markerFill);
+          spr.drawCircle(markerCx, markerCy, 6, markerBorder);
+          spr.drawLine(markerCx - 2, markerCy, markerCx, markerCy + 2, TFT_WHITE);
+          spr.drawLine(markerCx, markerCy + 2, markerCx + 3, markerCy - 2, TFT_WHITE);
+          drawX += 16;
+        }
+        const int16_t textY = posY + off + textOffsetY;
+        if (textY >= 0 && textY + textHeight <= renderHeight)
+        {
+          sprDrawString(itemTitle.c_str(), drawX, textY);
+        }
+        posY += menuItemHeight;
+      }
+      tmpCurrMenuItem++;
+    }
+  }
+
+  // Slim right-side scrollbar for menu position feedback.
+  const int16_t scrollTrackX = 317;
+  const int16_t scrollTrackY = renderOffsetY + 2;
+  const int16_t scrollTrackW = 3;
+  const int16_t scrollTrackH = tft.height() - 4;
+  const uint16_t scrollTrackColor = 0x2104; // subtle dark gray
+  const uint16_t scrollThumbColor = 0x5AEB; // softer cyan-blue
+  spr.fillRoundRect(scrollTrackX, scrollTrackY, scrollTrackW, scrollTrackH, 1, scrollTrackColor);
+
+  const uint16_t totalItems = totalItemsCurrent;
+  const int32_t totalHeight = int32_t(totalItems) * int32_t(menuItemHeight);
+  const int32_t viewHeight = tft.height();
+  if (totalHeight > viewHeight)
+  {
+    const int32_t maxScroll = totalHeight - viewHeight;
+    int32_t scrollPx = int32_t(liveData->menuItemOffset) * int32_t(menuItemHeight) + int32_t(menuItemOffsetPx);
+    if (scrollPx < 0)
+      scrollPx = 0;
+    if (scrollPx > maxScroll)
+      scrollPx = maxScroll;
+
+    int16_t thumbH = int16_t((int32_t(scrollTrackH) * viewHeight) / totalHeight);
+    if (thumbH < 14)
+      thumbH = 14;
+    if (thumbH > scrollTrackH)
+      thumbH = scrollTrackH;
+
+    const int16_t thumbTravel = scrollTrackH - thumbH;
+    int16_t thumbY = scrollTrackY;
+    if (maxScroll > 0 && thumbTravel > 0)
+      thumbY += int16_t((scrollPx * thumbTravel) / maxScroll);
+
+    spr.fillRoundRect(scrollTrackX, thumbY, scrollTrackW, thumbH, 1, scrollThumbColor);
+  }
+
+  spr.pushSprite(0, -renderOffsetY);
+}
+
+/**
+ * Hide menu
+ */
+void Board320_240::hideMenu()
+{
+  messageDialogVisible = false;
+  liveData->menuVisible = false;
+  liveData->menuCurrent = 0;
+  liveData->menuItemSelected = 0;
+  menuTouchHoverIndex = -1;
+  releaseMenuBackbuffer();
+  redrawScreen();
+}
+
+/**
+ * Move in menu with left/right button
+ */
+void Board320_240::menuMove(bool forward, bool rotate)
+{
+  uint16_t tmpCount = 0;
+  for (uint16_t i = 0; i < liveData->menuItemsCount; ++i)
+  {
+    if (liveData->menuCurrent == liveData->menuItems[i].parentId && strlen(liveData->menuItems[i].title) != 0)
+      tmpCount++;
+  }
+  if (forward)
+  {
+    liveData->menuItemSelected = (liveData->menuItemSelected >= tmpCount - 1) ? (rotate ? 0 : tmpCount - 1)
+                                                                              : liveData->menuItemSelected + 1;
+  }
+  else
+  {
+    liveData->menuItemSelected = (liveData->menuItemSelected <= 0) ? (rotate ? tmpCount - 1 : 0)
+                                                                   : liveData->menuItemSelected - 1;
+  }
+  menuItemOffsetPx = 0;
+  showMenu();
+}
+
+/**
+ * Enter menu item
+ */
+void Board320_240::menuItemClick()
+{
+  // Locate menu item for meta data
+  MENU_ITEM *tmpMenuItem = NULL;
+  uint16_t tmpCurrMenuItem = 0;
+  int16_t parentMenu = -1;
+  uint16_t i;
+  String m1, m2;
+
+  for (i = 0; i < liveData->menuItemsCount; ++i)
+  {
+    if (liveData->menuCurrent == liveData->menuItems[i].parentId && strlen(liveData->menuItems[i].title) != 0)
+    {
+      if (parentMenu == -1)
+        parentMenu = liveData->menuItems[i].targetParentId;
+      if (liveData->menuItemSelected == tmpCurrMenuItem)
+      {
+        tmpMenuItem = &liveData->menuItems[i];
+        break;
+      }
+      tmpCurrMenuItem++;
+    }
+  }
+
+  // Exit menu, parent level menu, open item
+  bool showParentMenu = false;
+  if (liveData->menuItemSelected > 0 && tmpMenuItem != NULL)
+  {
+    syslog->print("Menu item: ");
+    syslog->println(tmpMenuItem->id);
+    printHeapMemory();
+    // WiFi scan list
+    if (tmpMenuItem->id >= LIST_OF_WIFI_1 && tmpMenuItem->id <= LIST_OF_WIFI_10)
+    {
+      uint8_t index = tmpMenuItem->id - LIST_OF_WIFI_1;
+      if (index < liveData->wifiScanCount && strlen(liveData->wifiScanSsid[index]) > 0)
+      {
+        String ssid = liveData->wifiScanSsid[index];
+        bool openNetwork = (liveData->wifiScanEnc[index] == WIFI_AUTH_OPEN);
+        String password = "";
+        if (!promptWifiPassword(ssid.c_str(), password, openNetwork))
+        {
+          showMenu();
+          return;
+        }
+        liveData->settings.wifiEnabled = 1;
+        ssid.toCharArray(liveData->settings.wifiSsid, sizeof(liveData->settings.wifiSsid));
+        password.toCharArray(liveData->settings.wifiPassword, sizeof(liveData->settings.wifiPassword));
+        saveSettings();
+        displayMessage("WiFi connecting", ssid.c_str());
+        wifiSetup();
+        showMenu();
+        return;
+      }
+      showMenu();
+      return;
+    }
+    // Device list
+    if (tmpMenuItem->id > LIST_OF_BLE_DEV_TOP && tmpMenuItem->id < MENU_LAST)
+    {
+      strlcpy((char *)liveData->settings.obdMacAddress, (char *)tmpMenuItem->obdMacAddress, 20);
+      strlcpy((char *)liveData->settings.obd2Name, (char *)tmpMenuItem->title, 18);
+      syslog->print("Selected adapter MAC address ");
+      syslog->println(liveData->settings.obdMacAddress);
+      saveSettings();
+      ESP.restart();
+    }
+    // Other menus
+    switch (tmpMenuItem->id)
+    {
+    case MENU_CLEAR_STATS:
+      liveData->clearDrivingAndChargingStats(CAR_MODE_DRIVE);
+      hideMenu();
+      return;
+      break;
+    // Set vehicle type
+    case VEHICLE_TYPE_IONIQ_2018_28:
+      liveData->settings.carType = CAR_HYUNDAI_IONIQ_2018;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_IONIQ_2018_PHEV:
+      liveData->settings.carType = CAR_HYUNDAI_IONIQ_PHEV;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_KONA_2020_64:
+      liveData->settings.carType = CAR_HYUNDAI_KONA_2020_64;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_KONA_2020_39:
+      liveData->settings.carType = CAR_HYUNDAI_KONA_2020_39;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_HYUNDAI_IONIQ5_58_63:
+      liveData->settings.carType = CAR_HYUNDAI_IONIQ5_58_63;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_HYUNDAI_IONIQ5_72:
+      liveData->settings.carType = CAR_HYUNDAI_IONIQ5_72;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_HYUNDAI_IONIQ5_77_84:
+      liveData->settings.carType = CAR_HYUNDAI_IONIQ5_77_84;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_HYUNDAI_IONIQ6_53:
+      liveData->settings.carType = CAR_HYUNDAI_IONIQ6_53;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_HYUNDAI_IONIQ6_58_63:
+      liveData->settings.carType = CAR_HYUNDAI_IONIQ6_58_63;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_HYUNDAI_IONIQ6_77_84:
+      liveData->settings.carType = CAR_HYUNDAI_IONIQ6_77_84;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_ENIRO_2020_64:
+      liveData->settings.carType = CAR_KIA_ENIRO_2020_64;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_ENIRO_2020_39:
+      liveData->settings.carType = CAR_KIA_ENIRO_2020_39;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_ESOUL_2020_64:
+      liveData->settings.carType = CAR_KIA_ESOUL_2020_64;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_KIA_EV6_58_63:
+      liveData->settings.carType = CAR_KIA_EV6_58_63;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_KIA_EV6_77_84:
+      liveData->settings.carType = CAR_KIA_EV6_77_84;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_KIA_EV9_100:
+      liveData->settings.carType = CAR_KIA_EV9_100;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_AUDI_Q4_35:
+      liveData->settings.carType = CAR_AUDI_Q4_35;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_AUDI_Q4_40:
+      liveData->settings.carType = CAR_AUDI_Q4_40;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_AUDI_Q4_45:
+      liveData->settings.carType = CAR_AUDI_Q4_45;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_AUDI_Q4_50:
+      liveData->settings.carType = CAR_AUDI_Q4_50;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_SKODA_ENYAQ_55:
+      liveData->settings.carType = CAR_SKODA_ENYAQ_55;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_SKODA_ENYAQ_62:
+      liveData->settings.carType = CAR_SKODA_ENYAQ_62;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_SKODA_ENYAQ_82:
+      liveData->settings.carType = CAR_SKODA_ENYAQ_82;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_SKODA_CITIGO_E_IV:
+      liveData->settings.carType = CAR_SKODA_CITIGO_E_IV;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_VW_ID3_2021_45:
+      liveData->settings.carType = CAR_VW_ID3_2021_45;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_VW_ID3_2021_58:
+      liveData->settings.carType = CAR_VW_ID3_2021_58;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_VW_ID3_2021_77:
+      liveData->settings.carType = CAR_VW_ID3_2021_77;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_VW_ID4_2021_45:
+      liveData->settings.carType = CAR_VW_ID4_2021_45;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_VW_ID4_2021_58:
+      liveData->settings.carType = CAR_VW_ID4_2021_58;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_VW_ID4_2021_77:
+      liveData->settings.carType = CAR_VW_ID4_2021_77;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_VW_EUP_36:
+      liveData->settings.carType = CAR_VW_EUP_36;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_ZOE_22_DEV:
+      liveData->settings.carType = CAR_RENAULT_ZOE_ZE20_22;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_ZOE_ZE40_41:
+      liveData->settings.carType = CAR_RENAULT_ZOE_ZE40_41;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_ZOE_ZE50_52:
+      liveData->settings.carType = CAR_RENAULT_ZOE_ZE50_52;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_SEAT_MII_ELECTRIC_36:
+      liveData->settings.carType = CAR_SEAT_MII_ELECTRIC_36;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_BMWI3_2014_22:
+      liveData->settings.carType = CAR_BMW_I3_2014;
+      showMenu();
+      return;
+      break;
+    case VEHICLE_TYPE_PEUGEOT_E208:
+      liveData->settings.carType = CAR_PEUGEOT_E208;
+      showMenu();
+      return;
+      break;
+    // Comm type
+    case MENU_ADAPTER_OBD2_BLE4:
+      liveData->settings.commType = COMM_TYPE_OBD2_BLE4;
+      displayMessage("COMM_TYPE_OBD2_BLE4", "Rebooting");
+      saveSettings();
+      ESP.restart();
+      break;
+    case MENU_ADAPTER_CAN_COMMU:
+      liveData->settings.commType = COMM_TYPE_CAN_COMMU;
+      displayMessage("COMM_TYPE_CAN_COMMU", "Rebooting");
+      saveSettings();
+      ESP.restart();
+      break;
+    case MENU_ADAPTER_OBD2_NAME:
+    {
+      String value = String(liveData->settings.obd2Name);
+      if (promptKeyboard("BLE4 name", value, false, sizeof(liveData->settings.obd2Name) - 1))
+      {
+        value.toCharArray(liveData->settings.obd2Name, sizeof(liveData->settings.obd2Name));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_ADAPTER_COMMAND_QUEUE_AUTOSTOP:
+      liveData->settings.commandQueueAutoStop = (liveData->settings.commandQueueAutoStop == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_ADAPTER_DISABLE_COMMAND_OPTIMIZER:
+      liveData->settings.disableCommandOptimizer = (liveData->settings.disableCommandOptimizer == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_ADAPTER_MOBILE_RELAY:
+    {
+      const bool enabling = (liveData->settings.relayForMobileEnabled == 0);
+      liveData->settings.relayForMobileEnabled = enabling ? 1 : 0;
+      saveSettings();
+      if (enabling && liveData->settings.commType != COMM_TYPE_OBD2_BLE4)
+      {
+        displayMessage("Mobile relay on", "Rebooting");
+        ESP.restart();
+      }
+      showMenu();
+      return;
+    }
+      break;
+    case MENU_ADAPTER_MOBILE_RELAY_PAIR:
+    {
+      const bool wasOff = (liveData->settings.relayForMobileEnabled == 0);
+      liveData->settings.relayForMobileEnabled = 1;
+      saveSettings();
+      if (wasOff && liveData->settings.commType != COMM_TYPE_OBD2_BLE4)
+      {
+        displayMessage("Relay enabled", "Reboot, pair again");
+        ESP.restart();
+      }
+      String code = (mobileRelay != nullptr) ? mobileRelay->startPairing() : "";
+      displayMessage("Relay pairing code", code.c_str());
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_ADAPTER_MOBILE_RELAY_FORGET:
+      if (mobileRelay != nullptr)
+      {
+        mobileRelay->forgetPairing();
+      }
+      else
+      {
+        liveData->settings.relayToken[0] = '\0';
+        liveData->settings.relayMobileId[0] = '\0';
+        saveSettings();
+      }
+      showMenu();
+      return;
+      break;
+    case MENU_ADAPTER_LOAD_TEST_DATA:
+      loadTestData();
+      break;
+    case MENU_BOARD_POWER_MODE:
+      liveData->settings.boardPowerMode = (liveData->settings.boardPowerMode == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    // Screen orientation
+    case MENU_SCREEN_ROTATION:
+      liveData->settings.displayRotation = (liveData->settings.displayRotation == 1) ? 3 : 1;
+      tft.setRotation(liveData->settings.displayRotation);
+      showMenu();
+      return;
+      break;
+    // Default screen
+    case DEFAULT_SCREEN_AUTOMODE:
+      liveData->settings.defaultScreen = 1;
+      showParentMenu = true;
+      break;
+    case DEFAULT_SCREEN_BASIC_INFO:
+      liveData->settings.defaultScreen = 2;
+      showParentMenu = true;
+      break;
+    case DEFAULT_SCREEN_SPEED:
+      liveData->settings.defaultScreen = 3;
+      showParentMenu = true;
+      break;
+    case DEFAULT_SCREEN_BATT_CELL:
+      liveData->settings.defaultScreen = 4;
+      showParentMenu = true;
+      break;
+    case DEFAULT_SCREEN_CHG_GRAPH:
+      liveData->settings.defaultScreen = 5;
+      showParentMenu = true;
+      break;
+    case DEFAULT_SCREEN_HUD:
+      liveData->settings.defaultScreen = 8;
+      showParentMenu = true;
+      break;
+    // SleepMode off/on
+    case MENU_SLEEP_MODE_MODE:
+      liveData->settings.sleepModeLevel = (liveData->settings.sleepModeLevel == SLEEP_MODE_SCREEN_ONLY) ? SLEEP_MODE_OFF : liveData->settings.sleepModeLevel + 1;
+      showMenu();
+      return;
+      break;
+    case MENU_SCREEN_BRIGHTNESS:
+      liveData->settings.lcdBrightness += 20;
+      if (liveData->settings.lcdBrightness > 100)
+        liveData->settings.lcdBrightness = 0;
+      setBrightness();
+      showMenu();
+      return;
+      break;
+    case MENU_REMOTE_UPLOAD_UART:
+      liveData->settings.gprsHwSerialPort = (liveData->settings.gprsHwSerialPort == 2) ? 255 : liveData->settings.gprsHwSerialPort + 1;
+      showMenu();
+      return;
+      break;
+    case MENU_REMOTE_UPLOAD_API_INTERVAL:
+      liveData->settings.remoteUploadIntervalSec = (liveData->settings.remoteUploadIntervalSec == 120) ? 0 : liveData->settings.remoteUploadIntervalSec + 10;
+      liveData->settings.remoteUploadAbrpIntervalSec = 0;
+      showMenu();
+      return;
+      break;
+    case MENU_REMOTE_UPLOAD_ABRP_INTERVAL:
+      // Cycle through: off, 0.5, 1.0, 1.5 ... 5.0 seconds.
+      liveData->settings.remoteUploadAbrpIntervalSec = (liveData->settings.remoteUploadAbrpIntervalSec >= 10) ? 0 : liveData->settings.remoteUploadAbrpIntervalSec + 1;
+      liveData->settings.remoteUploadIntervalSec = 0;
+      showMenu();
+      return;
+      break;
+    case MENU_REMOTE_UPLOAD_ABRP_LOG_SDCARD:
+      liveData->settings.abrpSdcardLog = (liveData->settings.abrpSdcardLog == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_REMOTE_UPLOAD_TRACCAR_ENABLED:
+      liveData->settings.traccarEnabled = (liveData->settings.traccarEnabled == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_REMOTE_UPLOAD_TRACCAR_SERVER:
+    {
+      String value = String(liveData->settings.traccarServerHost);
+      if (promptKeyboard("Traccar server", value, false, sizeof(liveData->settings.traccarServerHost) - 1))
+      {
+        value.trim();
+        if (value.length() == 0)
+          value = "demo3.traccar.org";
+        value.toCharArray(liveData->settings.traccarServerHost, sizeof(liveData->settings.traccarServerHost));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_REMOTE_UPLOAD_TRACCAR_PORT:
+    {
+      String value = String(liveData->settings.traccarServerPort);
+      if (promptKeyboard("Traccar port", value, false, 5))
+      {
+        value.trim();
+        long parsedPort = value.toInt();
+        if (parsedPort <= 0)
+          parsedPort = 5055;
+        if (parsedPort > 65535)
+          parsedPort = 65535;
+        liveData->settings.traccarServerPort = static_cast<uint16_t>(parsedPort);
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_REMOTE_UPLOAD_MQTT_ENABLED:
+      liveData->settings.mqttEnabled = (liveData->settings.mqttEnabled == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_REMOTE_UPLOAD_MQTT_SERVER:
+    {
+      String value = String(liveData->settings.mqttServer);
+      if (promptKeyboard("MQTT server", value, false, sizeof(liveData->settings.mqttServer) - 1))
+      {
+        value.toCharArray(liveData->settings.mqttServer, sizeof(liveData->settings.mqttServer));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_REMOTE_UPLOAD_MQTT_ID:
+    {
+      String value = String(liveData->settings.mqttId);
+      if (promptKeyboard("MQTT id", value, false, sizeof(liveData->settings.mqttId) - 1))
+      {
+        value.toCharArray(liveData->settings.mqttId, sizeof(liveData->settings.mqttId));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_REMOTE_UPLOAD_MQTT_USERNAME:
+    {
+      String value = String(liveData->settings.mqttUsername);
+      if (promptKeyboard("MQTT user", value, false, sizeof(liveData->settings.mqttUsername) - 1))
+      {
+        value.toCharArray(liveData->settings.mqttUsername, sizeof(liveData->settings.mqttUsername));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_REMOTE_UPLOAD_MQTT_PASSWORD:
+    {
+      String value = String(liveData->settings.mqttPassword);
+      if (promptKeyboard("MQTT passwd", value, false, sizeof(liveData->settings.mqttPassword) - 1))
+      {
+        value.toCharArray(liveData->settings.mqttPassword, sizeof(liveData->settings.mqttPassword));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_REMOTE_UPLOAD_MQTT_TOPIC:
+    {
+      String value = String(liveData->settings.mqttPubTopic);
+      if (promptKeyboard("MQTT topic", value, false, sizeof(liveData->settings.mqttPubTopic) - 1))
+      {
+        value.toCharArray(liveData->settings.mqttPubTopic, sizeof(liveData->settings.mqttPubTopic));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_REMOTE_UPLOAD_CONTRIBUTE_DATA_TO_EVDASH_DEV_TEAM:
+      liveData->settings.contributeData = (liveData->settings.contributeData == 1) ? 0 : 1;
+      if (liveData->settings.contributeData == 0)
+      {
+        liveData->params.contributeStatus = CONTRIBUTE_NONE;
+        contributeStatusSinceMs = 0;
+        nextContributeCycleAtMs = 0;
+        liveData->clearContributeRawFrames();
+      }
+      else
+      {
+        nextContributeCycleAtMs = millis();
+      }
+      showMenu();
+      return;
+      break;
+    case MENU_REMOTE_UPLOAD_CONTRIBUTE_ONCE:
+      syslog->println("CONTRIBUTE_WAITING");
+      // Manual contribute request should bypass temporary net backoff.
+      liveData->params.netAvailable = true;
+      liveData->params.netLastFailureTime = 0;
+      liveData->params.netFailureStartTime = 0;
+      liveData->params.netFailureCount = 0;
+      liveData->params.lastContributeSent = liveData->params.currentTime;
+      liveData->params.contributeStatus = CONTRIBUTE_WAITING;
+      contributeStatusSinceMs = millis();
+      nextContributeCycleAtMs = millis() + kContributeCycleIntervalMs;
+      if (liveData->settings.commType == COMM_TYPE_CAN_COMMU &&
+          commInterface != nullptr)
+      {
+        const String canStatus = commInterface->getConnectStatus();
+        if (canStatus.indexOf("No MCP2515") != -1)
+        {
+          syslog->println("No MCP2515 detected, sending contribute once immediately");
+          liveData->params.contributeStatus = CONTRIBUTE_READY_TO_SEND;
+        }
+      }
+      break;
+    case MENU_REMOTE_UPLOAD_LOGS_TO_EVDASH_SERVER:
+      uploadSdCardLogToEvDashServer();
+      delay(2000);
+      showMenu();
+      return;
+      break;
+    case MENU_GPS_MODULE_TYPE:
+      liveData->settings.gpsModuleType = (liveData->settings.gpsModuleType == GPS_MODULE_TYPE_GPS_V21_GNSS) ? GPS_MODULE_TYPE_NONE : liveData->settings.gpsModuleType + 1;
+      if (liveData->settings.gpsModuleType == GPS_MODULE_TYPE_NEO_M8N)
+      {
+        liveData->settings.gpsSerialPortSpeed = 9600;
+      }
+      else if (liveData->settings.gpsModuleType == GPS_MODULE_TYPE_M5_GNSS)
+      {
+        liveData->settings.gpsSerialPortSpeed = 38400;
+      }
+      else if (liveData->settings.gpsModuleType == GPS_MODULE_TYPE_GPS_V21_GNSS)
+      {
+        liveData->settings.gpsSerialPortSpeed = 115200;
+      }
+      showMenu();
+      return;
+      break;
+    case MENU_GPS_PORT:
+      liveData->settings.gpsHwSerialPort = (liveData->settings.gpsHwSerialPort == 2) ? 0 : 2;
+      showMenu();
+      return;
+      break;
+    case MENU_GPS_SPEED:
+      liveData->settings.gpsSerialPortSpeed = (liveData->settings.gpsSerialPortSpeed == 9600) ? 38400 : (liveData->settings.gpsSerialPortSpeed == 38400) ? 115200
+                                                                                                                                                         : 9600;
+      showMenu();
+      return;
+      break;
+    case MENU_CAR_SPEED_TYPE:
+      liveData->settings.carSpeedType = (liveData->settings.carSpeedType == CAR_SPEED_TYPE_GPS) ? 0 : liveData->settings.carSpeedType + 1;
+      showMenu();
+      return;
+      break;
+    case MENU_SERIAL_CONSOLE:
+      liveData->settings.serialConsolePort = (liveData->settings.serialConsolePort == 0) ? 255 : liveData->settings.serialConsolePort + 1;
+      showMenu();
+      return;
+      break;
+    case MENU_DEBUG_LEVEL:
+      liveData->settings.debugLevel = (liveData->settings.debugLevel == DEBUG_GPS) ? 0 : liveData->settings.debugLevel + 1;
+      syslog->setDebugLevel(liveData->settings.debugLevel);
+      showMenu();
+      return;
+      break;
+    case MENU_CURRENT_TIME:
+      showMenu();
+      return;
+      break;
+    case MENU_TIMEZONE:
+      liveData->settings.timezone = (liveData->settings.timezone == 14) ? -11 : liveData->settings.timezone + 1;
+      showMenu();
+      return;
+      break;
+    case MENU_DAYLIGHT_SAVING:
+      liveData->settings.daylightSaving = (liveData->settings.daylightSaving == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_SPEED_CORRECTION:
+      liveData->settings.speedCorrection = (liveData->settings.speedCorrection == 5) ? -5 : liveData->settings.speedCorrection + 1;
+      showMenu();
+      return;
+      break;
+    case MENU_RHD:
+      liveData->settings.rightHandDrive = (liveData->settings.rightHandDrive == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    // Wifi menu
+    case MENU_WIFI_SCAN:
+      wifiScanToMenu();
+      return;
+      break;
+    case MENU_WIFI_PAIR_EVDASH:
+      startEvdashPairing();
+      return;
+      break;
+    case MENU_WIFI_ENABLED:
+      liveData->settings.wifiEnabled = (liveData->settings.wifiEnabled == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_WIFI_ENABLED2:
+      liveData->settings.backupWifiEnabled = (liveData->settings.backupWifiEnabled == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_WIFI_NTP:
+      liveData->settings.ntpEnabled = (liveData->settings.ntpEnabled == 1) ? 0 : 1;
+      if (liveData->settings.ntpEnabled)
+        ntpSync();
+      showMenu();
+      return;
+      break;
+    case MENU_WIFI_SSID:
+    {
+      String value = String(liveData->settings.wifiSsid);
+      if (promptKeyboard("Change WiFi SSID", value, false, sizeof(liveData->settings.wifiSsid) - 1))
+      {
+        value.toCharArray(liveData->settings.wifiSsid, sizeof(liveData->settings.wifiSsid));
+        saveSettings();
+        if (liveData->settings.wifiEnabled == 1)
+          wifiSetup();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_WIFI_PASSWORD:
+    {
+      String value = String(liveData->settings.wifiPassword);
+      String title = String("Passwd for ") + String(liveData->settings.wifiSsid);
+      if (promptKeyboard(title.c_str(), value, false, sizeof(liveData->settings.wifiPassword) - 1))
+      {
+        value.toCharArray(liveData->settings.wifiPassword, sizeof(liveData->settings.wifiPassword));
+        saveSettings();
+        if (liveData->settings.wifiEnabled == 1)
+          wifiSetup();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_WIFI_SSID2:
+    {
+      String value = String(liveData->settings.wifiSsid2);
+      if (promptKeyboard("Change WiFi SSID2", value, false, sizeof(liveData->settings.wifiSsid2) - 1))
+      {
+        value.toCharArray(liveData->settings.wifiSsid2, sizeof(liveData->settings.wifiSsid2));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_WIFI_PASSWORD2:
+    {
+      String value = String(liveData->settings.wifiPassword2);
+      String title = String("Passwd for ") + String(liveData->settings.wifiSsid2);
+      if (promptKeyboard(title.c_str(), value, false, sizeof(liveData->settings.wifiPassword2) - 1))
+      {
+        value.toCharArray(liveData->settings.wifiPassword2, sizeof(liveData->settings.wifiPassword2));
+        saveSettings();
+      }
+      showMenu();
+      return;
+    }
+    break;
+    case MENU_WIFI_ACTIVE:
+    case MENU_WIFI_IPADDR:
+      return;
+      break;
+    // Sdcard
+    case MENU_SDCARD_ENABLED:
+      liveData->settings.sdcardEnabled = (liveData->settings.sdcardEnabled == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_SDCARD_JSON_TYPE:
+      liveData->settings.contributeJsonType = CONTRIBUTE_JSON_TYPE_V2;
+      showMenu();
+      return;
+      break;
+    case MENU_SDCARD_AUTOSTARTLOG:
+      liveData->settings.sdcardAutstartLog = (liveData->settings.sdcardAutstartLog == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_SDCARD_MOUNT_STATUS:
+      sdcardMount();
+      break;
+    case MENU_SDCARD_REC:
+      sdcardToggleRecording();
+      showMenu();
+      return;
+      break;
+    case MENU_SDCARD_SETTINGS_SAVE:
+      if (!confirmMessage("Confirm action", "Do you want to save?"))
+      {
+        showMenu();
+        return;
+      }
+      showMenu();
+      if (liveData->settings.sdcardEnabled && sdcardMount())
+      {
+        File file = SD.open("/settings_backup.bin", FILE_WRITE);
+        if (!file)
+        {
+          syslog->println("Failed to create file");
+          displayMessage("SDCARD", "Failed to create file");
+        }
+        if (file)
+        {
+          syslog->info(DEBUG_NONE, "Save settings to SD card");
+          uint8_t *buff = (uint8_t *)&liveData->settings;
+          file.write(buff, sizeof(liveData->settings));
+          file.close();
+          displayMessage("SDCARD", "Saved");
+          delay(2000);
+        }
+      }
+      else
+      {
+        displayMessage("SDCARD", "Not mounted");
+      }
+      showMenu();
+      return;
+      break;
+    case MENU_SDCARD_SETTINGS_RESTORE:
+      if (!confirmMessage("Confirm action", "Do you want to restore?"))
+      {
+        showMenu();
+        return;
+      }
+      showMenu();
+      if (liveData->settings.sdcardEnabled && sdcardMount())
+      {
+        File file = SD.open("/settings_backup.bin", FILE_READ);
+        if (!file)
+        {
+          syslog->println("Failed to open file for reading");
+          displayMessage("SDCARD", "Failed to open file for reading");
+        }
+        else
+        {
+          syslog->info(DEBUG_NONE, "Restore settings from SD card");
+          const size_t backupSize = static_cast<size_t>(file.size());
+          const size_t structSize = sizeof(liveData->settings);
+          syslog->print("Backup size: ");
+          syslog->println(backupSize);
+          syslog->print("Settings struct size: ");
+          syslog->println(structSize);
+
+          SETTINGS_STRUC restoredSettings = liveData->settings;
+          size_t bytesToRead = backupSize;
+          if (bytesToRead > structSize)
+            bytesToRead = structSize;
+
+          size_t size = file.read((uint8_t *)&restoredSettings, bytesToRead);
+          syslog->print("Restored bytes: ");
+          syslog->println(size);
+          file.close();
+
+          if (size == bytesToRead)
+          {
+            liveData->settings = restoredSettings;
+            saveSettings();
+            ESP.restart();
+          }
+          else
+          {
+            displayMessage("SDCARD", "Restore read failed");
+          }
+        }
+      }
+      else
+      {
+        displayMessage("SDCARD", "Not mounted or not exists");
+      }
+      showMenu();
+      return;
+      break;
+    case MENU_SDCARD_ERASE_LOGS:
+      if (!confirmMessage("Confirm action", "Erase all SD logs?"))
+      {
+        showMenu();
+        return;
+      }
+      showMenu();
+      sdcardEraseLogs();
+      showMenu();
+      return;
+      break;
+    // Voltmeter INA 3221
+    case MENU_VOLTMETER_ENABLED:
+      liveData->settings.voltmeterEnabled = (liveData->settings.voltmeterEnabled == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_VOLTMETER_SLEEP:
+      liveData->settings.voltmeterBasedSleep = (liveData->settings.voltmeterBasedSleep == 1) ? 0 : 1;
+      showMenu();
+      return;
+      break;
+    case MENU_VOLTMETER_INFO:
+      if (liveData->settings.voltmeterEnabled == 1)
+      {
+        m1 = "";
+        m1.concat(ina3221.getBusVoltage_V(1));
+        m1.concat("/");
+        m1.concat(ina3221.getBusVoltage_V(2));
+        m1.concat("/");
+        m1.concat(ina3221.getBusVoltage_V(3));
+        m1.concat("V");
+        m2 = "";
+        m2.concat(ina3221.getCurrent_mA(1));
+        m2.concat("/");
+        m2.concat(ina3221.getCurrent_mA(2));
+        m2.concat("/");
+        m2.concat(ina3221.getCurrent_mA(3));
+        m2.concat("mA");
+        displayMessage(m1.c_str(), m2.c_str());
+      }
+      return;
+      break;
+    case MENU_VOLTMETER_SLEEPVOL:
+      liveData->settings.voltmeterSleep = (liveData->settings.voltmeterSleep >= 14.0) ? 11.0 : liveData->settings.voltmeterSleep + 0.2;
+      showMenu();
+      return;
+      break;
+    case MENU_VOLTMETER_WAKEUPVOL:
+      liveData->settings.voltmeterWakeUp = (liveData->settings.voltmeterWakeUp >= 14.0) ? 11.0 : liveData->settings.voltmeterWakeUp + 0.2;
+      showMenu();
+      return;
+      break;
+    case MENU_VOLTMETER_CUTOFFVOL:
+      liveData->settings.voltmeterCutOff = (liveData->settings.voltmeterCutOff >= 13.0) ? 10.0 : liveData->settings.voltmeterCutOff + 0.2;
+      showMenu();
+      return;
+      break;
+    // Distance
+    case DISTANCE_UNIT_KM:
+      liveData->settings.distanceUnit = 'k';
+      showParentMenu = true;
+      break;
+    case DISTANCE_UNIT_MI:
+      liveData->settings.distanceUnit = 'm';
+      showParentMenu = true;
+      break;
+    // Temperature
+    case TEMPERATURE_UNIT_CEL:
+      liveData->settings.temperatureUnit = 'c';
+      showParentMenu = true;
+      break;
+    case TEMPERATURE_UNIT_FAR:
+      liveData->settings.temperatureUnit = 'f';
+      showParentMenu = true;
+      break;
+    // Pressure
+    case PRESURE_UNIT_BAR:
+      liveData->settings.pressureUnit = 'b';
+      showParentMenu = true;
+      break;
+    case PRESURE_UNIT_PSI:
+      liveData->settings.pressureUnit = 'p';
+      showParentMenu = true;
+      break;
+    // Pair ble device
+    case MENU_ADAPTER_BLE_SELECT:
+      adapterSearchInProgress = true;
+
+      if (liveData->settings.commType == COMM_TYPE_OBD2_BLE4)
+      {
+        scanDevices = true;
+        liveData->menuCurrent = 9999;
+        commInterface->scanDevices();
+        return;
+      }
+
+      adapterSearchInProgress = false;
+      if (liveData->settings.commType != COMM_TYPE_OBD2_BLE4)
+      {
+        displayMessage("Not supported", "Use BLE4 mode");
+        delay(3000);
+        hideMenu();
+        return;
+      }
+      return;
+    // Reset settings
+    case MENU_FACTORY_RESET:
+      if (confirmMessage("Confirm action", "Do you want to reset?"))
+      {
+        showMenu();
+        resetSettings();
+        hideMenu();
+      }
+      else
+      {
+        showMenu();
+      }
+      return;
+    // Save settings
+    case MENU_SAVE_SETTINGS:
+      saveSettings();
+      break;
+    // Version
+    case MENU_APP_VERSION:
+      displayMessage("App version", APP_VERSION);
+      showMenu();
+      return;
+      break;
+    // Memory usage
+    case MENU_MEMORY_USAGE:
+      m1 = "Heap ";
+      m1.concat(ESP.getHeapSize());
+      m1.concat("/");
+      m1.concat(heap_caps_get_free_size(MALLOC_CAP_8BIT));
+      m2 = "Psram ";
+      m2.concat(ESP.getPsramSize());
+      m2.concat("/");
+      m2.concat(ESP.getFreePsram());
+      displayMessage(m1.c_str(), m2.c_str());
+      return;
+      break;
+    // Shutdown
+    case MENU_SHUTDOWN:
+      enterSleepMode(0);
+      return;
+    // Reboot
+    case MENU_REBOOT:
+      ESP.restart();
+      return;
+    default:
+      // Submenu
+      liveData->menuCurrent = tmpMenuItem->id;
+      liveData->menuItemSelected = 0;
+      showMenu();
+      return;
+    }
+  }
+
+  // Exit menu
+  if (liveData->menuItemSelected == 0 || (showParentMenu && parentMenu != -1))
+  {
+    if (tmpMenuItem->parentId == 0 && tmpMenuItem->id == 0)
+    {
+      liveData->menuVisible = false;
+      redrawScreen();
+    }
+    else
+    {
+      // Parent menu
+      MENU_ID returnItemId = (MENU_ID)liveData->menuCurrent;
+      if (liveData->menuCurrent == LIST_OF_BLE_DEV)
+      {
+        returnItemId = MENU_ADAPTER_BLE_SELECT;
+        if (adapterSearchInProgress)
+        {
+          parentMenu = MENU_ADAPTER_TYPE;
+          adapterSearchInProgress = false;
+        }
+      }
+      else if (liveData->menuCurrent == LIST_OF_WIFI_DEV)
+      {
+        if (adapterSearchInProgress)
+        {
+          returnItemId = MENU_ADAPTER_BLE_SELECT;
+          parentMenu = MENU_ADAPTER_TYPE;
+          adapterSearchInProgress = false;
+        }
+        else
+        {
+          returnItemId = MENU_WIFI_SCAN;
+        }
+      }
+
+      liveData->menuItemSelected = 0;
+      bool foundReturnItem = false;
+      for (i = 0; i < liveData->menuItemsCount; ++i)
+      {
+        if (parentMenu == liveData->menuItems[i].parentId)
+        {
+          if (liveData->menuItems[i].id == returnItemId)
+          {
+            foundReturnItem = true;
+            break;
+          }
+          liveData->menuItemSelected++;
+        }
+      }
+      if (!foundReturnItem)
+      {
+        liveData->menuItemSelected = 0;
+      }
+
+      liveData->menuCurrent = parentMenu;
+      liveData->menuItemOffset = 0;
+      menuItemOffsetPx = 0;
+      syslog->println(liveData->menuCurrent);
+      showMenu();
+    }
+    return;
+  }
+
+  // Close menu
+  hideMenu();
+}

@@ -1,0 +1,144 @@
+# evDash
+
+evDash is an open-source EV dashboard for M5Stack devices. It reads live vehicle data from CAN/OBD2, shows real-time screens on a 320x240 touch display, and can log or upload telemetry over WiFi.
+
+Use this firmware at your own risk.
+
+- Discord: [Join the community](https://discord.gg/rfAvH7xzTr)
+- Release notes: [RELEASENOTES.md](RELEASENOTES.md)
+- Installation guide: [INSTALLATION.md](INSTALLATION.md)
+
+## What evDash does
+
+- live EV telemetry on multiple screens (tiles, speed, cells, charging graph, debug, HUD)
+- touch-first UI with menu paging, drag scrolling, and on-screen keyboard
+- communication via CAN (MCP2515/COMMU) or OBD2 BLE4
+- SD card logging and optional remote uploads (ABRP, MQTT, contribute)
+
+## Supported hardware
+
+### Recommended configuration
+
+- M5Stack CoreS3 SE (K128-SE)
+- SD card 2-32 MB
+- GPS M003-V2.1 module
+- OBDLink CX BLE4 adapter
+
+### Main boards
+
+- **Preferred:** M5Stack CoreS3 SE (K128-SE)
+- **Preferred:** M5Stack CoreS3
+- M5Stack Core2 v1.1
+- M5Stack Core2 v1.0
+
+### Vehicle interface
+
+- **Preferred:** CAN via COMMU / MCP2515
+- **Preferred:** OBD2 BLE4 adapter (`OBDLink CX BLE4` recommended)
+
+### GPS modules
+
+- **Preferred:** GPS module v2.1 with SMA antenna (AT6668) for M5Core / M5Stack `M003-V2.1`
+- M5 GNSS (NEO-M9N, typically 38400 bps)
+- M5 GPS (NEO-M8N, typically 9600 bps)
+
+## Supported vehicles
+
+This project is for battery EVs and EV/PHEV models with implemented decoders.
+
+Fully supported:
+- Hyundai Ioniq 5/6 (eGMP)
+- Kia EV6 (eGMP)
+
+Community/ongoing support:
+- Kia e-Niro, e-Soul, EV9
+- Hyundai Kona EV, Ioniq, Ioniq PHEV
+- Renault Zoe
+- BMW i3
+- Peugeot e-208
+- VW ID.3 / ID.4
+- Audi Q4
+- Skoda Enyaq
+
+Support level varies by model year and ECU behavior. See [RELEASENOTES.md](RELEASENOTES.md) for the latest parser and feature updates.
+
+## Quick install (binary)
+
+Use the evDash Web Flasher: https://www.evdash.eu/m5flash or follow [INSTALLATION.md](INSTALLATION.md).
+
+## Contribute data
+
+`Contribute data` is primarily for secure access to your own vehicle history (not a dev-team telemetry feed).
+
+- Default state is `ON`.
+- If you do not want remote history at all, disable it in `Others -> Remote upload -> Contribute data -> OFF`.
+- While driving, older SD `v2` logs are uploaded quietly in background (starts after about `5 minutes` once internet is available).
+- This backfills gaps when live upload was temporarily unavailable.
+- Successful upload renames `_v2.json` to `_v2_uploaded.json`; failed uploads stay unchanged for retry.
+
+Typical benefits:
+- trip history and route timeline
+- charging behavior comparison over time
+- battery/cell trend tracking and degradation diagnostics
+- optional sharing of live position or a selected trip via view token
+
+Security notes:
+- transport is over HTTPS and tied to device authentication (`hwDeviceId` + token)
+- backend is hosted on private infrastructure at Slovak Telekom
+- operational access is restricted to a single maintainer
+
+If you want stricter privacy controls (for example auto-delete horizon, route location aging, home/work/cabin anonymization), these can be added.
+
+## UI controls
+
+### Touch zones (normal screens)
+
+- left third: previous screen
+- right third: next screen
+- center third: open menu
+
+### Menu controls
+
+- top-left `64x64`: exit/parent menu
+- top-right `64x64`: page up
+- bottom-right `64x64`: page down
+- rest of area: select item
+- drag: smooth vertical menu scroll
+
+![Touch Zones](docs/core2_touch_zones.jpg)
+
+## Screens
+
+- blank (LCD off)
+- auto mode
+- tiles/basic summary
+- speed + driving/charging indicators
+- battery cell voltages and temperatures
+- charging graph
+- debug / diagnostics
+- HUD (when enabled)
+
+![Ioniq 6 Screenshot](screenshots/v2_ioniq6.png)
+
+## CoreS3 vs Core2 variants
+
+All supported boards run evDash, but practical behavior differs:
+
+| Topic | CoreS3 / CoreS3 SE | Core2 v1.0 | Core2 v1.1 |
+|---|---|---|---|
+| Firmware target | `m5stack-cores3` | `m5stack-core2-v1_0` | `m5stack-core2-v1_1` |
+| UI responsiveness | Best | Good | Good |
+| OBD BLE4 | Yes | Yes | Yes |
+| CAN COMMU | No | Yes | Yes |
+| CPU + speed | ESP32-S3, up to 240 MHz | ESP32, up to 240 MHz | ESP32, up to 240 MHz |
+| PMIC | AXP2101 | AXP192 | AXP2101 |
+| RTC backup battery | No | No | Yes |
+
+CoreS3 is usually the best overall choice for daily use and UI performance.
+Core2 v1.1 is usually better than Core2 v1.0 for long-running logging and stable timekeeping.
+
+## No longer supported
+
+- M5Stack Core1
+- LILYGO TTGO T4 v1.3
+- SIM800L GPRS module
